@@ -22,14 +22,16 @@ def get_classroom_id(classroom_name):
     classrooms = classrooms[3:]
     # Loop through each repository
     for classroom in classrooms:
-        # Split the classroom details by whitespace
-        classroom_details = classroom.split()
-        # Get the classroom ID and name
-        classroom_id = classroom_details[0]
-        classroom_name = classroom_details[1]
-        # Check if the classroom name matches the one you send
-        if classroom_name == classroom_name:
-            return classroom_id
+        if classroom.strip():  # Skip empty lines
+            # Split the classroom details by whitespace
+            classroom_details = classroom.split()
+            if len(classroom_details) >= 2:  # Make sure we have enough data
+                # Get the classroom ID and name
+                classroom_id = classroom_details[0]
+                current_classroom_name = classroom_details[1]
+                # Check if the classroom name matches the one you send
+                if current_classroom_name == classroom_name:
+                    return classroom_id
     # Return None if the classroom is not found
     return None
 
@@ -54,13 +56,15 @@ def get_assignments(classroom_id):
     # Loop through each assignment
     assignment_data = []
     for assignment in assignments:
-        # Split the assignment details by tab character
-        assignment_details = assignment.split('\t')
-        # Get the assignment ID, name, and repository
-        assignment_id = assignment_details[0]
-        assignment_name = assignment_details[1]
-        assignment_repo = assignment_details[6]
-        assignment_data.append((assignment_id, assignment_name, assignment_repo))
+        if assignment.strip():  # Skip empty lines
+            # Split the assignment details by tab character
+            assignment_details = assignment.split('\t')
+            if len(assignment_details) >= 7:  # Make sure we have enough data
+                # Get the assignment ID, name, and repository
+                assignment_id = assignment_details[0]
+                assignment_name = assignment_details[1]
+                assignment_repo = assignment_details[6]
+                assignment_data.append((assignment_id, assignment_name, assignment_repo))
     return assignment_data
 
 def download_grades(assignment_id, path):
@@ -170,8 +174,8 @@ def consolidate_grades(path):
 
     # Save the consolidated DataFrame to an Excel file
     date_string = datetime.datetime.now().strftime("%Y%m%d")
-    file_name = f'consolidated_assignments_{date_string}.xlsx'
-    consolidated_df.to_excel(file_name, index=False)
+    file_name = f'consolidated_assignments_{date_string}.csv'
+    consolidated_df.to_csv(file_name, index=False)
 
 def get_assignment_commits(assignment_id):
     """
@@ -190,9 +194,14 @@ def get_assignment_commits(assignment_id):
     users_commits = users_commits.split('\n')
     # Remove the first three lines
     users_commits = users_commits[3:]
+    # Filter out empty lines
+    users_commits = [line for line in users_commits if line.strip()]
     # Create a DataFrame from the command output
-    df = pd.DataFrame([x.split() for x in users_commits[1:]], columns=['id', 'submitted', 'passing', 'commits', 'github_username', 'feedback', 'other'])
-    print(df)
+    if users_commits:
+        df = pd.DataFrame([x.split() for x in users_commits], columns=['id', 'submitted', 'passing', 'commits', 'github_username', 'feedback', 'other'])
+        print(df)
+    else:
+        print("No data found for this assignment.")
 
 if __name__ == "__main__":
     # Path to the CSVs
@@ -202,9 +211,15 @@ if __name__ == "__main__":
     delete_old_csv_files(path)
 
     # Call the function to get the classroom ID
-    classroom_id = get_classroom_id("B4OS-Dev-classroom")
+    classroom_id = get_classroom_id("B4OS-Dev-2025")
     print(f"Classroom ID: {classroom_id}")
+    
+    if classroom_id is None:
+        print("Error: Could not find classroom 'B4OS-Dev-2025'. Please check the classroom name.")
+        exit(1)
+    
     assignment_data = get_assignments(classroom_id)
+    print(f"Found {len(assignment_data)} assignments")
 
     # Download grades for each assignment
     download_grades_for_assignments(assignment_data, path)
@@ -212,4 +227,5 @@ if __name__ == "__main__":
     # Consolidate grades
     consolidate_grades(path)
     
-    get_assignment_commits(605580)
+    # Get commits for a specific assignment (you can change this ID)
+    get_assignment_commits(165832493)
