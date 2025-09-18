@@ -338,9 +338,16 @@ class ClassroomSupabaseSync:
         if not name or not isinstance(name, str):
             raise DataValidationError("Assignment name must be a non-empty string")
         
-        # Replace spaces with hyphens but don't truncate
-        # Removed [:30] limit to preserve full assignment names
-        formatted = name.replace(' ', '-')
+        # Clean and format assignment name for GitHub repository naming
+        # Convert to lowercase, replace spaces and special chars with hyphens
+        # Remove multiple consecutive hyphens
+        import re
+        formatted = name.lower()
+        formatted = re.sub(r'[^a-z0-9\s-]', '', formatted)  # Keep only alphanumeric, spaces, and hyphens
+        formatted = re.sub(r'\s+', '-', formatted)  # Replace spaces with single hyphen
+        formatted = re.sub(r'-+', '-', formatted)  # Replace multiple hyphens with single hyphen
+        formatted = formatted.strip('-')  # Remove leading/trailing hyphens
+        
         logger.debug(f"Formatted assignment name: '{name}' -> '{formatted}'")
         return formatted
     
