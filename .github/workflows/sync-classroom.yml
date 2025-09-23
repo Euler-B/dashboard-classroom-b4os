@@ -33,7 +33,6 @@ jobs:
         
     - name: 📦 Install Python dependencies
       run: |
-        cd backend
         pip install -r requirements.txt
         
     - name: 🔧 Setup GitHub CLI
@@ -56,8 +55,7 @@ jobs:
         MAX_RETRIES: 3
         TIMEOUT_SECONDS: 30
       run: |
-        cd backend
-        python src/download_grades_supabase.py
+        python backend/src/download_grades_supabase.py
         
     - name: 📊 Upload logs (on failure)
       if: failure()
