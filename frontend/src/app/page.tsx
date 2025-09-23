@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { supabase, type Student, type Assignment, type ConsolidatedGrade } from '@/lib/supabase'
 import { Users, BookOpen, Medal, TrendUp } from 'phosphor-react'
 import StatsCard from '@/components/StatsCard'
@@ -36,14 +37,31 @@ export default function Dashboard() {
     }
   }
 
-  // Calculate statistics - only consider grades with score > 0
-  const validGrades = grades.filter(grade => (grade.points_awarded || 0) > 0)
+  // Calculate statistics with proper percentage calculation
+  const calculatePercentage = (pointsAwarded: number, pointsAvailable: number) => {
+    if (pointsAvailable > 0) {
+      return (pointsAwarded / pointsAvailable) * 100
+    } else if (pointsAwarded > 0) {
+      return 100 // Si hay puntos otorgados pero no disponibles, considerar 100%
+    }
+    return 0
+  }
+
+  const validGrades = grades.filter(grade => {
+    const pointsAwarded = grade.points_awarded || 0
+    const pointsAvailable = grade.points_available || 0
+    return pointsAwarded > 0 || pointsAvailable > 0
+  })
+
   const stats = {
     totalStudents: students.length,
     totalAssignments: assignments.length,
     totalGrades: validGrades.length,
     averageGrade: validGrades.length > 0 
-      ? Math.round(validGrades.reduce((sum, grade) => sum + (grade.percentage || 0), 0) / validGrades.length)
+      ? Math.round(validGrades.reduce((sum, grade) => {
+          const percentage = calculatePercentage(grade.points_awarded || 0, grade.points_available || 0)
+          return sum + percentage
+        }, 0) / validGrades.length)
       : 0
   }
 
@@ -54,32 +72,20 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <img 
-                src="/web-app-manifest-192x192.png" 
-                alt="$B4OS Logo" 
-                className="h-10 w-10 mr-3"
-              />
-
-            </div>
-            <nav className="hidden md:flex space-x-8">
-              <a href="#" className="text-slate-600 hover:text-slate-900 font-medium">Dashboard</a>
-              <a href="#" className="text-slate-600 hover:text-slate-900 font-medium">Students</a>
-              <a href="#" className="text-slate-600 hover:text-slate-900 font-medium">Analytics</a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center justify-between">
             <div className="text-center lg:text-left mb-8 lg:mb-0">
+              <div className="flex items-center justify-center lg:justify-start mb-4">
+                <Image 
+                  src="/web-app-manifest-192x192.png" 
+                  alt="$B4OS Logo" 
+                  width={48}
+                  height={48}
+                  className="mr-3"
+                />
+              </div>
               <h3 className="text-2xl font-semibold text-orange-400 mb-2">
                 Bitcoin 4 Open Source estado de los challenges
               </h3>

@@ -1,34 +1,24 @@
+# Logs
+*.log
+logs/
+backend/logs/
+backend/src/logs/
+
 # Environment variables
 .env
 .env.local
-.env.*.local
+.env.production
+.env.development
 
-# Python
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
-venv/
 env/
+venv/
 ENV/
 env.bak/
 venv.bak/
@@ -38,12 +28,9 @@ venv.bak/
 .idea/
 *.swp
 *.swo
+*~
 
-# Logs
-*.log
-classroom_sync.log
-
-# macOS
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -52,6 +39,12 @@ classroom_sync.log
 ehthumbs.db
 Thumbs.db
 
-# Temporary files
-*.tmp
-*.temp
+# Next.js
+.next/
+out/
+build/
+
+# Python
+*.egg-info/
+dist/
+build/

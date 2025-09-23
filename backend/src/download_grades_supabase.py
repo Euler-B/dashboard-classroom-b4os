@@ -37,8 +37,8 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     """Setup structured logging configuration."""
     log_level = getattr(logging, log_level.upper(), logging.INFO)
     
-    # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
+    # Create logs directory if it doesn't exist (relative to project root)
+    log_dir = Path("../logs")
     log_dir.mkdir(exist_ok=True)
     
     # Configure logging
@@ -384,7 +384,10 @@ class ClassroomSupabaseSync:
         # Retry mechanism
         for attempt in range(self.config.max_retries):
             try:
-                result = self.supabase.table('students').upsert(students_data).execute()
+                result = self.supabase.table('students').upsert(
+                    students_data,
+                    on_conflict='github_username'
+                ).execute()
                 logger.info(f"Successfully synced {len(students_data)} students")
                 return
                 
@@ -434,7 +437,10 @@ class ClassroomSupabaseSync:
         # Retry mechanism
         for attempt in range(self.config.max_retries):
             try:
-                result = self.supabase.table('assignments').upsert(assignments_data).execute()
+                result = self.supabase.table('assignments').upsert(
+                    assignments_data, 
+                    on_conflict='name'
+                ).execute()
                 logger.info(f"Successfully synced {len(assignments_data)} assignments")
                 return
                 
@@ -485,7 +491,10 @@ class ClassroomSupabaseSync:
         # Retry mechanism
         for attempt in range(self.config.max_retries):
             try:
-                result = self.supabase.table('grades').upsert(grades_data).execute()
+                result = self.supabase.table('grades').upsert(
+                    grades_data,
+                    on_conflict='github_username,assignment_name'
+                ).execute()
                 logger.info(f"Successfully synced {len(grades_data)} grade records")
                 return
                 
@@ -523,8 +532,29 @@ class ClassroomSupabaseSync:
                     # Format assignment name
                     formatted_name = self.format_assignment_name(assignment_name)
                     
-                    # Store assignment info
-                    points_available = df['points_available'].iloc[0] if 'points_available' in df.columns else None
+                    # Store assignment info - use max points_available instead of first record
+                    if 'points_available' in df.columns:
+                        # Get the maximum points_available from all records
+                        points_available = df['points_available'].max()
+                        
+                        # If max is 0 or NaN, try to get a non-zero value
+                        if points_available == 0 or pd.isna(points_available):
+                            non_zero_points = df[df['points_available'] > 0]['points_available']
+                            if not non_zero_points.empty:
+                                points_available = non_zero_points.iloc[0]
+                            else:
+                                # Special case: if this is Part 2 and points_available is 0, use 100 as default
+                                # This handles cases where GitHub Classroom API returns 0 but the assignment actually has points
+                                if 'part-2' in formatted_name.lower():
+                                    points_available = 100
+                                    logger.info(f"Assignment {formatted_name} - Using default 100 points for Part 2 (API returned 0)")
+                                else:
+                                    points_available = None
+                                    logger.warning(f"Assignment {formatted_name} - No non-zero points_available found")
+                    else:
+                        points_available = None
+                        logger.warning(f"Assignment {formatted_name} - No points_available column found")
+                    
                     assignment_info.append({
                         'name': formatted_name,
                         'points_available': points_available
