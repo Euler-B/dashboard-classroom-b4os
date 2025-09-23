@@ -41,8 +41,6 @@ jobs:
         gh --version
         
     - name: 🔐 Configure GitHub CLI
-      env:
-        GH_TOKEN: ${{ github.token }}
       run: |
         # Usar token del repositorio para autenticación
         echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
@@ -56,7 +54,6 @@ jobs:
         
     - name: 🏰 Run Classroom Sync
       env:
-        GH_TOKEN: ${{ github.token }}
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         CLASSROOM_NAME: ${{ inputs.classroom_name || secrets.CLASSROOM_NAME }}
