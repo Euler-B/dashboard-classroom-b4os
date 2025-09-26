@@ -24,14 +24,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "B4OS Dashboard - GitHub Classroom Grades",
-  description: "Dashboard para visualizar calificaciones de GitHub Classroom",
+  title: "B4OS Dashboard - Reino del Código Abierto",
+  description: "Dashboard Programa Bitcoin 4 Open Source",
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
+      { url: 'https://res.cloudinary.com/dkuwkpihs/image/upload/v1758759628/web-app-manifest-192x192_dkecn9.png', sizes: '32x32', type: 'image/png' },
+      { url: 'https://res.cloudinary.com/dkuwkpihs/image/upload/v1758759628/web-app-manifest-192x192_dkecn9.png', sizes: '16x16', type: 'image/png' },
       { url: 'https://res.cloudinary.com/dkuwkpihs/image/upload/v1758759628/web-app-manifest-192x192_dkecn9.png', sizes: '192x192', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico',
+    shortcut: 'https://res.cloudinary.com/dkuwkpihs/image/upload/v1758759628/web-app-manifest-192x192_dkecn9.png',
     apple: 'https://res.cloudinary.com/dkuwkpihs/image/upload/v1758759628/web-app-manifest-192x192_dkecn9.png',
   },
 };
