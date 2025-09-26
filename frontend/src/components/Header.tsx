@@ -4,7 +4,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import Image from 'next/image'
-import { CaretDown, SignOut, User, Shield, Crown, Eye, EyeSlash, Sword } from 'phosphor-react'
+import { CaretDown, SignOut, Crown, Eye, EyeSlash, Sword } from 'phosphor-react'
 import { useNamePreference } from '@/contexts/NamePreferenceContext'
 
 export default function Header() {

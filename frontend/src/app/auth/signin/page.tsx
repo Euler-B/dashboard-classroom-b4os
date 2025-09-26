@@ -102,8 +102,8 @@ export default function SignIn() {
 
             {/* Description */}
             <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-              "Bienvenido al Reino del Código Abierto. 
-              Solo los miembros de la hermandad pueden acceder a estas tierras."
+              &ldquo;Bienvenido al Reino del Código Abierto.
+              Solo los miembros de la hermandad pueden acceder a estas tierras.&rdquo;
             </p>
 
             {/* Sign In Button */}
