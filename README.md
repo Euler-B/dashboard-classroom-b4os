@@ -47,7 +47,7 @@ npm run dev
 ### Variables de Entorno
 ```env
 # Backend (.env)
-CLASSROOM_NAME=B4OS-Dev-2025
+CLASSROOM_NAME=tu_nombre_de_clase
 SUPABASE_URL=https://tu-proyecto.supabase.co
 SUPABASE_KEY=tu_clave_anon_aqui
 
@@ -58,7 +58,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_anon_aqui
 
 ### Base de Datos
 1. Crear proyecto en [Supabase](https://supabase.com)
-2. Ejecutar `setup_database.sql` en el SQL Editor
+2. Configurar las tablas necesarias:
+   - `students` (github_username, updated_at)
+   - `assignments` (id, name, points_available, updated_at)
+   - `grades` (id, github_username, assignment_name, points_awarded, updated_at)
+   - `consolidated_grades` (vista consolidada)
+   - `authorized_users` (github_username, role)
+   - `user_privacy` (github_username, show_real_name, updated_at)
 
 ## Stack Tecnológico
 

@@ -1,6 +1,8 @@
-### Plan
+# GitHub Classroom Activity Tracking
 
-https://github.com/PyGithub/PyGithub
+Este documento describe un script para realizar seguimiento de la actividad de estudiantes en proyectos de GitHub Classroom.
+
+## Plan
 
 1. **Recibir URLs de los proyectos y nombres de usuario de GitHub**:
     - Crear una función para recibir las URLs de los proyectos y los nombres de usuario de GitHub.
@@ -11,7 +13,7 @@ https://github.com/PyGithub/PyGithub
 3. **Mostrar los resultados**:
     - Crear una función para mostrar los resultados de la actividad de cada usuario.
 
-### Código
+## Código
 
 Aquí tienes un script en Python que realiza el seguimiento de la actividad de los alumnos en los proyectos de GitHub especificados:
 
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### Explicación
+## Explicación
 
 1. **Importación de Módulos**:
     - `requests`: Para realizar solicitudes HTTP.
@@ -96,7 +98,7 @@ if __name__ == "__main__":
     - Recibe las URLs de los proyectos y los nombres de usuario de GitHub de los estudiantes.
     - Llama a `get_user_activity` para cada estudiante y muestra los resultados.
 
-### Ejecución del Script
+## Ejecución del Script
 
 Para ejecutar el script, asegúrate de tener instalado el módulo `PyGithub`:
 
