@@ -3,7 +3,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
-import { supabase } from '@/lib/supabase'
 
 interface NamePreferenceContextType {
   showRealName: boolean
@@ -29,19 +28,15 @@ export function NamePreferenceProvider({ children }: { children: ReactNode }) {
     if (!session?.user || !(session.user as any).githubUsername) return
 
     try {
-      const { data, error } = await supabase
-        .from('user_privacy')
-        .select('show_real_name')
-        .eq('github_username', (session.user as any).githubUsername)
-        .single()
+      const response = await fetch('/api/user-privacy')
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
-        console.error('Error loading user preference:', error)
+      if (!response.ok) {
+        console.error('Error loading user preference:', response.statusText)
         return
       }
 
-      const preference = data?.show_real_name || false
-      setShowRealNameState(preference)
+      const data = await response.json()
+      setShowRealNameState(data.show_real_name || false)
     } catch (error) {
       console.error('Error loading user preference:', error)
     }
@@ -57,24 +52,22 @@ export function NamePreferenceProvider({ children }: { children: ReactNode }) {
       // Optimistically update UI immediately
       setShowRealNameState(newValue)
 
-      const { data, error } = await supabase
-        .from('user_privacy')
-        .upsert({
-          github_username: (session.user as any).githubUsername,
-          show_real_name: newValue,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'github_username'
-        })
+      const response = await fetch('/api/user-privacy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ show_real_name: newValue })
+      })
 
-      if (error) {
-        console.error('❌ Error updating preference:', error)
-        console.error('Error details:', error.message, error.details, error.hint)
+      if (!response.ok) {
+        console.error('❌ Error updating preference:', response.statusText)
         // Revert optimistic update on error
         setShowRealNameState(!newValue)
         return
       }
 
+      const data = await response.json()
       // Success - the optimistic update was correct
       console.log('✅ Identity preference updated successfully:', data)
     } catch (error) {

@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { type Student, type Assignment, type ConsolidatedGrade, supabase } from '@/lib/supabase'
+import { type Student, type Assignment, type ConsolidatedGrade } from '@/lib/supabase'
 import { MagnifyingGlass, Funnel, CaretUp, CaretDown, Crown } from 'phosphor-react'
 import {
   generateAnonymousId,
@@ -38,17 +38,17 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
   useEffect(() => {
     const loadAllUserPreferences = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_privacy')
-          .select('github_username, show_real_name')
+        const response = await fetch('/api/user-preferences')
 
-        if (error) {
-          console.error('Error loading user preferences:', error)
+        if (!response.ok) {
+          console.error('Error loading user preferences:', response.statusText)
           return
         }
 
+        const data = await response.json()
+
         const preferences: Record<string, boolean> = {}
-        data?.forEach(pref => {
+        data.preferences?.forEach((pref: { github_username: string; show_real_name: boolean }) => {
           preferences[pref.github_username] = pref.show_real_name
         })
         setUserPreferences(preferences)
@@ -59,20 +59,11 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
 
     loadAllUserPreferences()
 
-    // Listen for changes in user_privacy table
-    const channel = supabase
-      .channel('user_privacy_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'user_privacy' },
-        () => {
-          console.log('✅ User preferences change detected, reloading preferences...')
-          loadAllUserPreferences()
-        }
-      )
-      .subscribe()
+    // Poll for changes every 5 seconds (replaces realtime subscription)
+    const interval = setInterval(loadAllUserPreferences, 5000)
 
     return () => {
-      supabase.removeChannel(channel)
+      clearInterval(interval)
     }
   }, [])
 
@@ -80,17 +71,17 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
   useEffect(() => {
     const loadAllUserPreferences = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_privacy')
-          .select('github_username, show_real_name')
+        const response = await fetch('/api/user-preferences')
 
-        if (error) {
-          console.error('Error loading user preferences:', error)
+        if (!response.ok) {
+          console.error('Error loading user preferences:', response.statusText)
           return
         }
 
+        const data = await response.json()
+
         const preferences: Record<string, boolean> = {}
-        data?.forEach(pref => {
+        data.preferences?.forEach((pref: { github_username: string; show_real_name: boolean }) => {
           preferences[pref.github_username] = pref.show_real_name
         })
         setUserPreferences(preferences)
