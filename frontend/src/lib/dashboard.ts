@@ -1,4 +1,4 @@
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { createClient } from '@supabase/supabase-js'
 import { authOptions } from './auth-config'
 import type { Student, Assignment, ConsolidatedGrade } from './supabase'

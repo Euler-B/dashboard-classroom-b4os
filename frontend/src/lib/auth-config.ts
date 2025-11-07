@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth'
+import type { NextAuthOptions } from 'next-auth'
 import GitHubProvider from 'next-auth/providers/github'
 import { createClient } from '@supabase/supabase-js'
 
@@ -16,7 +16,7 @@ interface GitHubProfile {
 }
 
 // Export NextAuth configuration to be used in both route handler and getServerSession
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
