@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { type Student, type Assignment, type ConsolidatedGrade } from '@/lib/supabase'
+import { type Student, type Assignment, type ConsolidatedGrade, type StudentFeedback } from '@/lib/supabase'
 import { Users, Crown, Sword, Shield } from 'phosphor-react'
 import StatsCard from '@/components/StatsCard'
 import StudentsTable from '@/components/StudentsTable'
@@ -14,11 +14,12 @@ interface DashboardClientProps {
     students: Student[]
     assignments: Assignment[]
     grades: ConsolidatedGrade[]
+    feedback: StudentFeedback[]
   }
 }
 
 export default function DashboardClient({ initialData }: DashboardClientProps) {
-  const { students, assignments, grades } = initialData
+  const { students, assignments, grades, feedback } = initialData
   const { showRealName } = useNamePreference()
   const t = useTranslations('dashboard')
   const tc = useTranslations('common')
@@ -251,10 +252,11 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
 
         {/* Students Table */}
-        <StudentsTable 
+        <StudentsTable
           students={students}
           assignments={assignments}
           grades={grades}
+          feedback={feedback}
           showRealNames={showRealName}
         />
       </div>

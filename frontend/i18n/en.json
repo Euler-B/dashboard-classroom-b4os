@@ -52,7 +52,9 @@
     "showing": "Showing",
     "of": "of",
     "records": "records",
-    "points": "pts"
+    "points": "pts",
+    "feedback": "Feedback",
+    "tutorFeedback": "Tutor Feedback"
   },
   "auth": {
     "signIn": "Sign In",

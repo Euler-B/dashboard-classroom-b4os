@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
 import { useSession } from 'next-auth/react'
-import { type Student, type Assignment, type ConsolidatedGrade } from '@/lib/supabase'
-import { MagnifyingGlass, Funnel, CaretUp, CaretDown, Crown } from 'phosphor-react'
+import { type Student, type Assignment, type ConsolidatedGrade, type StudentFeedback } from '@/lib/supabase'
+import { MagnifyingGlass, Funnel, CaretUp, CaretDown, Crown, ChatCircleText, CaretRight } from 'phosphor-react'
 import {
   generateAnonymousId,
   findUserByRealUsername,
@@ -18,21 +18,48 @@ interface StudentsTableProps {
   students: Student[]
   assignments: Assignment[]
   grades: ConsolidatedGrade[]
+  feedback: StudentFeedback[]
   showRealNames?: boolean
 }
 
 type SortField = 'github_username' | 'assignment_name' | 'points_awarded' | 'points_available' | 'percentage'
 type SortDirection = 'asc' | 'desc'
 
-export default function StudentsTable({ assignments, grades, showRealNames = false }: StudentsTableProps) {
+export default function StudentsTable({ assignments, grades, feedback, showRealNames = false }: StudentsTableProps) {
   const { data: session } = useSession()
-  const { showRealName } = useNamePreference() // Get current user's preference to trigger updates
+  const { showRealName } = useNamePreference()
   const t = useTranslations('table')
+
+  // KISS: Extract user info once
+  const isAdmin = (session?.user as any)?.role === 'administrator'
+  const currentUsername = (session?.user as any)?.githubUsername
+
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedAssignment, setSelectedAssignment] = useState('')
   const [sortField, setSortField] = useState<SortField>('github_username')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [userPreferences, setUserPreferences] = useState<Record<string, boolean>>({})
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  // Helper to get feedback for a specific assignment
+  const getFeedbackForAssignment = (username: string, assignmentName: string) => {
+    return feedback.filter(
+      f => f.student_username === username && f.assignment_name === assignmentName && f.feedback_for_student
+    )
+  }
+
+  // Toggle expanded row
+  const toggleRowExpanded = (rowKey: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(rowKey)) {
+        newSet.delete(rowKey)
+      } else {
+        newSet.add(rowKey)
+      }
+      return newSet
+    })
+  }
 
   // Load all user preferences
   useEffect(() => {
@@ -103,63 +130,50 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
     return 0
   }
 
-  // Function to determine what name to display
+  // KISS: Display name based on role and privacy preference
   const getDisplayName = (githubUsername: string) => {
-    // Check if this user has chosen to show their real name
-    const userWantsToShowRealName = userPreferences[githubUsername] || false
-    
-    // If the user chose to show their real name, show it to everyone
-    if (userWantsToShowRealName) {
+    if (isAdmin || userPreferences[githubUsername]) {
       return githubUsername
     }
-
-    // Otherwise show anonymous ID
     return generateAnonymousId(githubUsername)
   }
 
-  // Function to get display description
+  // KISS: Display description based on role and privacy preference
   const getDisplayDescription = (githubUsername: string) => {
-    // Check if this user has chosen to show their real name
-    const userWantsToShowRealName = userPreferences[githubUsername] || false
-    
-    // If the user chose to show their real name, show GitHub info to everyone
-    if (userWantsToShowRealName) {
-      return `GitHub: @${githubUsername}`
-    }
-
-    // Otherwise show anonymous description
     const anonymousId = generateAnonymousId(githubUsername)
+
+    // Admin sees anonymous ID as description (real name is already shown above)
+    if (isAdmin) {
+      return anonymousId
+    }
+    // User revealed identity - no extra description needed
+    if (userPreferences[githubUsername]) {
+      return ''
+    }
     return getAnonymousDescription(anonymousId)
   }
 
   // Check if search term matches a real username (exact match for self-identification)
   const searchedUserInfo = useMemo(() => {
     if (!searchTerm) return null
-    
-    const currentUserRole = (session?.user as any)?.role
-    const currentUserUsername = (session?.user as any)?.githubUsername
-    
-    // First check for exact match (for self-identification feature)
+
     const allUsernames = grades.map(g => g.github_username)
-    const exactMatch = allUsernames.find(username => 
+    const exactMatch = allUsernames.find(username =>
       username.toLowerCase() === searchTerm.toLowerCase()
     )
-    
+
     if (exactMatch) {
-      // If user is dev, only allow searching for their own username
-      if (currentUserRole === 'dev' && exactMatch !== currentUserUsername) {
-        return null // Don't allow devs to search for other users' real usernames
+      // Non-admins can only search for their own username
+      if (!isAdmin && exactMatch !== currentUsername) {
+        return null
       }
-      
+
       const result = findUserByRealUsername(exactMatch, allUsernames)
-      return result.found ? {
-        realUsername: exactMatch,
-        anonymousId: result.anonymousId
-      } : null
+      return result.found ? { realUsername: exactMatch, anonymousId: result.anonymousId } : null
     }
-    
+
     return null
-  }, [searchTerm, grades, session])
+  }, [searchTerm, grades, isAdmin, currentUsername])
 
   // Filter and sort data
   const filteredAndSortedGrades = useMemo(() => {
@@ -169,20 +183,12 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
     if (searchTerm) {
       filtered = filtered.filter(grade => {
         const anonymousId = generateAnonymousId(grade.github_username)
-        const currentUserRole = (session?.user as any)?.role || 'dev'
-        const currentUserUsername = (session?.user as any)?.githubUsername
-        
-        // Check if this user has chosen to show their real name
-        const userWantsToShowRealName = userPreferences[grade.github_username] || false
-        
+        const canSearchRealName = isAdmin || userPreferences[grade.github_username] || grade.github_username === currentUsername
+
         return (
-          // Search by anonymous ID (always allowed)
           anonymousId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          // Search by assignment name (always allowed)
           grade.assignment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          // Search by real username (if user chose to show it OR if admin or searching for own username)
-          (userWantsToShowRealName || currentUserRole === 'administrator' || grade.github_username === currentUserUsername) &&
-          grade.github_username.toLowerCase().includes(searchTerm.toLowerCase())
+          (canSearchRealName && grade.github_username.toLowerCase().includes(searchTerm.toLowerCase()))
         )
       })
     }
@@ -302,11 +308,7 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
               />
               <input
                 type="text"
-                placeholder={
-                  (session?.user as any)?.role === 'dev'
-                    ? t('searchPlaceholderDev')
-                    : t('searchPlaceholderAdmin')
-                }
+                placeholder={isAdmin ? t('searchPlaceholderAdmin') : t('searchPlaceholderDev')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
@@ -393,77 +395,113 @@ export default function StudentsTable({ assignments, grades, showRealNames = fal
               const displayName = getDisplayName(grade.github_username)
               const description = getDisplayDescription(grade.github_username)
               const isSearchedUser = searchedUserInfo?.realUsername.toLowerCase() === grade.github_username.toLowerCase()
-              const isCurrentUser = (session?.user as any)?.githubUsername === grade.github_username
-              
+              const isCurrentUser = currentUsername === grade.github_username
+              const rowKey = `${grade.github_username}-${grade.assignment_name}-${index}`
+              const assignmentFeedback = getFeedbackForAssignment(grade.github_username, grade.assignment_name)
+              const hasFeedback = assignmentFeedback.length > 0
+              const isExpanded = expandedRows.has(rowKey)
+
               return (
-                <tr 
-                  key={`${grade.github_username}-${grade.assignment_name}-${index}`} 
-                  className={`hover:bg-gray-50 transition-colors duration-200 ${
-                    isSearchedUser ? 'bg-amber-50 border-l-4 border-amber-500 shadow-sm' : ''
-                  }`}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <LOTRAvatar 
-                          githubUsername={grade.github_username}
-                          size="lg"
-                          className="transition-transform duration-200 hover:scale-110"
-                        />
-                      </div>
-                      <div className="ml-3">
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-medium text-gray-900">
-                            {displayName}
+                <Fragment key={rowKey}>
+                  <tr
+                    className={`hover:bg-gray-50 transition-colors duration-200 ${
+                      isSearchedUser ? 'bg-amber-50 border-l-4 border-amber-500 shadow-sm' : ''
+                    } ${hasFeedback ? 'cursor-pointer' : ''}`}
+                    onClick={hasFeedback ? () => toggleRowExpanded(rowKey) : undefined}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <LOTRAvatar
+                            githubUsername={grade.github_username}
+                            size="lg"
+                            className="transition-transform duration-200 hover:scale-110"
+                          />
+                        </div>
+                        <div className="ml-3">
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm font-medium text-gray-900">
+                              {displayName}
+                            </div>
+                            {isSearchedUser && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                <Crown className="h-3 w-3 mr-1" />
+                                {t('itsYou')}
+                              </span>
+                            )}
                           </div>
-                          {isSearchedUser && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                              <Crown className="h-3 w-3 mr-1" />
-                              {t('itsYou')}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 italic">
-                          {description}
+                          <div className="text-xs text-gray-500 italic">
+                            {description}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">
-                      {grade.assignment_name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {grade.points_awarded || 0}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">
-                      {grade.points_available || 0}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {/* Barra de progreso */}
-                      <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            percentage >= 80 ? 'bg-green-500' :
-                            percentage >= 60 ? 'bg-yellow-500' :
-                            percentage >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                          }`}
-                          style={{width: `${Math.min(percentage, 100)}%`}}
-                        ></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          {grade.assignment_name}
+                        </span>
+                        {hasFeedback && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                            <ChatCircleText className="h-3 w-3" />
+                            {t('feedback')}
+                            <CaretRight className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          </span>
+                        )}
                       </div>
-                      {/* Porcentaje con pill */}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeBgColor(percentage)} ${getGradeColor(percentage)}`}>
-                        {percentage}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {grade.points_awarded || 0}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {grade.points_available || 0}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        {/* Barra de progreso */}
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              percentage >= 80 ? 'bg-green-500' :
+                              percentage >= 60 ? 'bg-yellow-500' :
+                              percentage >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            }`}
+                            style={{width: `${Math.min(percentage, 100)}%`}}
+                          ></div>
+                        </div>
+                        {/* Porcentaje con pill */}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeBgColor(percentage)} ${getGradeColor(percentage)}`}>
+                          {percentage}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Expanded feedback row */}
+                  {hasFeedback && isExpanded && (
+                    <tr key={`${rowKey}-feedback`} className="bg-amber-50">
+                      <td colSpan={5} className="px-6 py-4">
+                        <div className="ml-12 space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                            <ChatCircleText className="h-4 w-4" />
+                            {t('tutorFeedback')}
+                          </div>
+                          {assignmentFeedback.map((fb, fbIndex) => (
+                            <div key={fbIndex} className="bg-white border border-amber-200 rounded-lg p-4 shadow-sm">
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{fb.feedback_for_student}</p>
+                              <p className="text-xs text-gray-500 mt-2 italic">
+                                — {fb.reviewer_username}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               )
             })}
           </tbody>
