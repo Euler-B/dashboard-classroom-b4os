@@ -52,7 +52,9 @@
     "showing": "Mostrando",
     "of": "de",
     "records": "registros",
-    "points": "pts"
+    "points": "pts",
+    "feedback": "Feedback",
+    "tutorFeedback": "Feedback del Tutor"
   },
   "auth": {
     "signIn": "Iniciar Sesión",

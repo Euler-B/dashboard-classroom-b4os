@@ -28,3 +28,13 @@ export interface ConsolidatedGrade {
   percentage: number | null
   grade_updated_at: string
 }
+
+export interface StudentFeedback {
+  id: number
+  student_username: string
+  reviewer_username: string
+  assignment_name: string
+  feedback_for_student: string | null
+  status: 'pending' | 'in_progress' | 'completed'
+  completed_at: string | null
+}
