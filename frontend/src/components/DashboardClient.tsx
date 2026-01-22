@@ -254,6 +254,7 @@ export default function DashboardClient({ initialData, weeklyProgressData }: Das
           grades={grades}
           feedback={feedback}
           showRealNames={showRealName}
+          averageGrade={stats.averageGrade}
         />
       </div>
       </div>
