@@ -24,7 +24,7 @@ Sistema para sincronizar y visualizar challenges de GitHub Classroom con temáti
 - **Identidades anónimas** consistentes y determinísticas
 - **Auto-identificación** mediante búsqueda de username real
 
-## Temática LOTR
+## Temática [LOTR](https://es.wikipedia.org/wiki/El_Se%C3%B1or_de_los_Anillos)
 
 ### Sistema de Anonimización
 - **Nombres épicos**: `ElfRivendell_Star42A`, `DwarfErebor_Fire88C`
@@ -45,9 +45,9 @@ Sistema para sincronizar y visualizar challenges de GitHub Classroom con temáti
 
 ## Stack Tecnológico
 
-**Frontend**: Next.js + TypeScript + Tailwind CSS
-**Autenticación**: NextAuth.js + GitHub OAuth
-**Base de Datos**: PostgreSQL (Supabase)
+**Frontend**: [Next.js](https://nextjs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Tailwind CSS](https://tailwindcss.com/)
+**Autenticación**: [NextAuth.js](https://next-auth.js.org/) + [GitHub OAuth](https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app)
+**Base de Datos**: [PostgreSQL](https://www.postgresql.org/) ([Supabase](https://supabase.com/))
 
 ## Licencia
 

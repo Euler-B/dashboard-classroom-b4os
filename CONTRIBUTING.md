@@ -35,9 +35,59 @@ Utilizamos una estrategia de "feature branches".
 -   El nombre de la rama debe ser descriptivo (ej. `feature/login-con-google`, `fix/error-en-dashboard`).
 -   Una vez que el desarrollo en la rama de funcionalidad está completo, se abre un Pull Request hacia `main`.
 
+## Conventional Commits
+
+Para mantener un historial de commits limpio, legible y útil, este proyecto sigue la especificación de [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Esto facilita la generación automática de changelogs, la detección de cambios que rompen la compatibilidad y la comprensión del propósito de cada commit.
+
+**Formato del Mensaje de Commit:**
+
+Cada mensaje de commit debe tener el siguiente formato:
+
+```
+<tipo>[ámbito opcional]: <descripción>
+
+[cuerpo opcional]
+
+[pie de página opcional]
+```
+
+**Tipos Comunes:**
+
+*   `feat`: Una nueva característica.
+*   `fix`: Una corrección de un error.
+*   `docs`: Cambios solo en la documentación.
+*   `style`: Cambios que no afectan el significado del código (espacios en blanco, formato, puntos y comas faltantes, etc.).
+*   `refactor`: Un cambio de código que no corrige un error ni añade una característica.
+*   `perf`: Un cambio de código que mejora el rendimiento.
+*   `test`: Añadir pruebas faltantes o corregir pruebas existentes.
+*   `build`: Cambios que afectan el sistema de construcción o dependencias externas (ej. npm, gulp).
+*   `ci`: Cambios en los archivos y scripts de configuración de CI (ej. Travis, Circle, BrowserStack, SauceLabs).
+*   `chore`: Otros cambios que no modifican el código fuente ni los archivos de prueba.
+*   `revert`: Revierte un commit anterior.
+
+**Ejemplos:**
+
+*   `feat(auth): añadir autenticación con Google`
+*   `fix(api): corregir error al obtener usuarios`
+*   `docs: actualizar guía de contribución`
+*   `chore(deps): actualizar dependencia de Next.js`
+
+**Automatización con Husky:**
+
+Para asegurar que todos los commits sigan esta convención, hemos configurado un hook de Git con [Husky](https://typicode.github.io/husky/) que validará el mensaje de tu commit antes de que se complete. Si el mensaje no cumple con el formato, el commit será rechazado y se te pedirá que lo corrijas.
+
 ## Uso del Makefile
 
 Hemos centralizado los comandos más comunes en un `Makefile` para simplificar el flujo de trabajo.
+
+## Prerrequisitos
+
+Para asegurar un entorno de desarrollo consistente, es necesario tener instalados `make` y [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm).
+
+*   **Make**: Es una herramienta de automatización de tareas. Generalmente viene preinstalado en sistemas operativos basados en Unix (Linux, macOS). Para Windows, puedes instalarlo como parte de [Git Bash](https://git-scm.com/downloads) o a través de un gestor de paquetes como [Chocolatey](https://chocolatey.org/install).
+*   **nvm (Node Version Manager)**: Permite gestionar múltiples versiones de Node.js. Asegúrate de tenerlo instalado en tu sistema.
+
+Una vez instalados `make` y `nvm`, el comando `make install` se encargará automáticamente de instalar y usar la versión de Node.js especificada en el archivo `.nvmrc` del proyecto.
 
 ### Inicio Rápido
 
@@ -45,10 +95,13 @@ Para instalar las dependencias y arrancar el servidor de desarrollo, ejecuta:
 
 ```bash
 # Instala las dependencias (equivale a npm install)
-make install
+$ make install
 
 # Inicia el servidor de desarrollo en http://localhost:3000
-make dev
+$ make dev
+
+# Muestra todos los comandos disponibles en el Makefile
+$ make help
 ```
 
 ### Configuración del Entorno

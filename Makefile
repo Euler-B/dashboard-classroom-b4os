@@ -4,24 +4,18 @@
 NPM = npm
 
 # Phony targets (targets that are not files)
-.PHONY: help install setup-env dev build start lint clean generate
+.PHONY: help install setup-env dev build start lint clean generate nvm-check
 
-help:
-	@echo "Makefile for B4OS Classroom Dashboard"
-	@echo ""
-	@echo "Usage:"
-	@echo "  make help          - Show this help message"
-	@echo "  make install       - Install dependencies"
-	@echo "  make setup-env     - Create .env.local from example"
-	@echo "  make dev           - Start the development server"
-	@echo "  make build         - Build the app for production"
-	@echo "  make start         - Start the production server"
-	@echo "  make lint          - Lint the code"
-	@echo "  make generate      - Generate a new component"
-	@echo "  make clean         - Remove generated files and caches"
-	@echo ""
+nvm-check:
+	@echo "Checking Node.js version with nvm..."
+	@if [ -f .nvmrc ]; then \
+		nvm install; \
+		nvm use; \
+	else \
+		echo "⚠️ .nvmrc not found. Please ensure you are using the correct Node.js version manually."; \
+	fi
 
-install:
+install: nvm-check
 	@echo "⚛️  Installing dependencies..."
 	$(NPM) install
 
