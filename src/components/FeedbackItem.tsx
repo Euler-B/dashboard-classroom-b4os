@@ -6,7 +6,7 @@ import { CheckCircle } from 'phosphor-react';
 
 interface FeedbackItemProps {
   feedback: Feedback;
-  onMarkAsRead: (id: number) => void;
+  onMarkAsRead: (id: string) => void;
 }
 
 const FeedbackItem = ({ feedback, onMarkAsRead }: FeedbackItemProps) => {

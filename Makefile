@@ -2,7 +2,6 @@
 
 # Variables
 NPM = npm
-FRONTEND_DIR = frontend/
 
 # Phony targets (targets that are not files)
 .PHONY: help install setup-env dev build start lint clean
@@ -52,5 +51,5 @@ lint:
 clean:
 	@echo "🧹 Cleaning up project..."
 	@rm -rf .next
-	@rm -rf /node_modules
+	@rm -rf node_modules
 	@echo "✅ Cleanup complete."

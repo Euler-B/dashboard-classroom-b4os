@@ -6,7 +6,7 @@ import { TABLE_NAMES } from './constants'
 // Note: This is safe because auth callbacks run only on the server, never exposed to client
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_ANON_KEY || ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
 interface GitHubProfile {

@@ -6,15 +6,7 @@ import type { Student, Assignment, ConsolidatedGrade, StudentFeedback } from './
 import { TABLE_NAMES } from './constants'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseServiceRoleKey = process.env.SUPABASE_ANON_KEY || ''
-
-// Mock data - temporary, to be replaced with a real data source
-const allFeedback = [
-  { id: 1, studentId: '1', content: 'Great job on the last assignment! Your analysis was spot on.', read: true, createdAt: '2024-05-10T10:00:00Z' },
-  { id: 2, studentId: '1', content: 'Remember to check the formatting guidelines for the next report.', read: false, createdAt: '2024-05-12T14:30:00Z' },
-  { id: 3, studentId: '2', content: 'Your presentation skills are improving.', read: true, createdAt: '2024-05-11T11:00:00Z' },
-  { id: 4, studentId: '1', content: 'I noticed a small error in your code submission for project "Orion". Please review line 42.', read: false, createdAt: '2024-05-13T09:00:00Z' },
-];
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 // Create Supabase client for server-side operations using service role key to bypass RLS
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
@@ -55,8 +47,20 @@ async function getFullLeaderboard(): Promise<DashboardData> {
     // Don't throw - feedback is optional
   }
 
-  // Mock unread feedback check for admin
-  const hasUnreadFeedback = allFeedback.some(f => f.studentId === '1' && !f.read);
+  // Check if there's any unread feedback in the system (admin sees all)
+  const { count: unreadReviewersCount } = await supabase
+    .from(TABLE_NAMES.STUDENT_REVIEWERS)
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'completed')
+    .eq('read_by_student', false)
+    .not('feedback_for_student', 'is', null);
+
+  const { count: unreadCommentsCount } = await supabase
+    .from(TABLE_NAMES.REVIEW_COMMENTS)
+    .select('*', { count: 'exact', head: true })
+    .eq('read_by_student', false);
+
+  const hasUnreadFeedback = ((unreadReviewersCount || 0) + (unreadCommentsCount || 0)) > 0;
 
   return {
     students: studentsResult.data || [],
@@ -130,8 +134,22 @@ async function getAnonymizedLeaderboard(currentUsername?: string): Promise<Dashb
     )
   }
 
-  // Mock unread feedback check for student
-  const hasUnreadFeedback = allFeedback.some(f => f.studentId === '1' && !f.read);
+  // Check if current user has unread feedback
+  const { count: unreadReviewersCount } = await supabase
+    .from(TABLE_NAMES.STUDENT_REVIEWERS)
+    .select('*', { count: 'exact', head: true })
+    .eq('student_username', currentUsername)
+    .eq('status', 'completed')
+    .eq('read_by_student', false)
+    .not('feedback_for_student', 'is', null);
+
+  const { count: unreadCommentsCount } = await supabase
+    .from(TABLE_NAMES.REVIEW_COMMENTS)
+    .select('*', { count: 'exact', head: true })
+    .eq('student_username', currentUsername)
+    .eq('read_by_student', false);
+
+  const hasUnreadFeedback = ((unreadReviewersCount || 0) + (unreadCommentsCount || 0)) > 0;
 
   return {
     students: studentsResult.data || [],

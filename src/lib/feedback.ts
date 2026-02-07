@@ -1,7 +1,7 @@
 
 
 export interface Feedback {
-  id: number;
+  id: string;
   studentId: string;
   content: string;
   read: boolean;
@@ -21,7 +21,7 @@ export async function getFeedback(): Promise<Feedback[]> {
   return response.json();
 }
 
-export async function markFeedbackAsRead(feedbackId: number): Promise<MarkAsReadResponse> {
+export async function markFeedbackAsRead(feedbackId: string): Promise<MarkAsReadResponse> {
   const response = await fetch('/api/feedback', {
     method: 'POST',
     headers: {

@@ -37,7 +37,7 @@ const FeedbackDropdown = ({ isOpen, onClose, onFeedbackRead }: FeedbackDropdownP
     }
   };
 
-  const handleMarkAsRead = async (id: number) => {
+  const handleMarkAsRead = async (id: string) => {
     try {
       await markFeedbackAsRead(id);
       setFeedbackList(prev =>
