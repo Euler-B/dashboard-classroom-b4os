@@ -12,14 +12,14 @@ import FeedbackBell from './FeedbackBell'
 import FeedbackDropdown from './FeedbackDropdown'
 
 interface HeaderProps {
-  hasUnreadFeedback: boolean;
-  isFeedbackOpen: boolean;
-  onFeedbackClick: () => void;
-  onFeedbackRead: () => void;
-  onCloseFeedback: () => void;
+  readonly hasUnreadFeedback: boolean;
+  readonly isFeedbackOpen: boolean;
+  readonly onFeedbackClick: () => void;
+  readonly onFeedbackRead: () => void;
+  readonly onCloseFeedback: () => void;
 }
 
-export default function Header({ hasUnreadFeedback, isFeedbackOpen, onFeedbackClick, onFeedbackRead, onCloseFeedback }: HeaderProps) {
+export default function Header({ hasUnreadFeedback, isFeedbackOpen, onFeedbackClick, onFeedbackRead, onCloseFeedback }: Readonly<HeaderProps>) {
   const { data: session } = useSession()
   const [showDropdown, setShowDropdown] = useState(false)
   const { showRealName, setShowRealName, loading } = useNamePreference()

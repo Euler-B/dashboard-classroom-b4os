@@ -48,8 +48,8 @@ export async function GET() {
 
   const combinedFeedback = [...reviewersFeedback, ...commentsFeedback];
 
-  // Sort by date (most recent first)
-  const sortedFeedback = combinedFeedback.sort((a, b) =>
+  // Sort by date (most recent first) - using toSorted to avoid mutation
+  const sortedFeedback = combinedFeedback.toSorted((a, b) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     : TABLE_NAMES.REVIEW_COMMENTS;
 
   // For reviewer table, id is int. For comments table, id is UUID (string)
-  const idValue = source === 'reviewer' ? parseInt(id) : id;
+  const idValue = source === 'reviewer' ? Number.parseInt(id) : id;
 
   const { error } = await supabase
     .from(table)
