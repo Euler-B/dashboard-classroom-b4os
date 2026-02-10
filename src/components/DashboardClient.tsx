@@ -1,13 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import { type Student, type Assignment, type ConsolidatedGrade, type StudentFeedback } from '@/lib/supabase'
-import { type WeeklyProgress } from '@/lib/dashboard' // Corrected import path for WeeklyProgress
+import { type Feedback } from '@/lib/feedback'
+import { type AssignmentProgress } from '@/lib/dashboard'
 import { Users, Crown, Sword, Shield } from 'phosphor-react'
 import StatsCard from '@/components/StatsCard'
 import StudentsTable from '@/components/StudentsTable'
 import Header from '@/components/Header'
-import ProgressChart from '@/components/ProgressChart' // Import ProgressChart
+import AssignmentProgressChart from '@/components/AssignmentProgressChart'
 import { useNamePreference } from '@/contexts/NamePreferenceContext'
 import { useTranslations } from 'next-intl'
 import { filterValidGrades, calculateGradePercentage } from '@/utils/gradeFilters'
@@ -18,21 +20,52 @@ interface DashboardClientProps {
     assignments: Assignment[]
     grades: ConsolidatedGrade[]
     feedback: StudentFeedback[]
+    hasUnreadFeedback: boolean
   },
-  weeklyProgressData: WeeklyProgress[] // Added weeklyProgressData prop
+  assignmentProgressData: AssignmentProgress[]
 }
 
-export default function DashboardClient({ initialData, weeklyProgressData }: Readonly<DashboardClientProps>) {
+export default function DashboardClient({ initialData, assignmentProgressData }: Readonly<DashboardClientProps>) {
   const { students, assignments, grades, feedback } = initialData
   const { showRealName } = useNamePreference()
 
-  // Debug logs para weeklyProgressData
-  console.log('[DashboardClient] weeklyProgressData recibido:', weeklyProgressData)
-  console.log('[DashboardClient] Tipo de weeklyProgressData:', typeof weeklyProgressData)
-  console.log('[DashboardClient] ¿Es array?:', Array.isArray(weeklyProgressData))
-  console.log('[DashboardClient] Longitud de weeklyProgressData:', weeklyProgressData?.length)
   const t = useTranslations('dashboard')
   const tc = useTranslations('common')
+
+  // Transform StudentFeedback to Feedback format (only completed feedback)
+  // Note: Some records may have id:null - logs added to track this issue
+  const feedbackList: Feedback[] = feedback
+    .filter((fb): fb is StudentFeedback & { status: 'completed' } => fb.status === 'completed' && !!fb.feedback_for_student)
+    .map(fb => ({
+      id: `reviewer-${fb.id}`,
+      studentId: fb.student_username,
+      content: fb.feedback_for_student!,
+      read: false,
+      createdAt: fb.completed_at || new Date().toISOString()
+    }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  // State for feedback dropdown
+  const [isFeedbackDropdownOpen, setFeedbackDropdownOpen] = useState(false)
+  const [hasUnreadFeedback, setHasUnreadFeedback] = useState(initialData.hasUnreadFeedback)
+
+  // Handlers for feedback dropdown
+  const handleToggleFeedbackDropdown = () => {
+    setFeedbackDropdownOpen(prev => {
+      if (!prev) { // If opening the dropdown
+        setHasUnreadFeedback(false); // Mark all as read visually
+      }
+      return !prev;
+    });
+  }
+
+  const handleFeedbackRead = () => {
+    // This function is a callback for the panel.
+    // We can re-fetch the dashboard data or simply turn off the bell.
+    // For now, let's assume reading any feedback might clear the "new" status.
+    // A more robust solution might check if *any* unread feedback remains.
+    setHasUnreadFeedback(false) // Simplistic approach: hide indicator after interaction
+  }
 
   // Filter valid grades using centralized business logic
   const validGrades = filterValidGrades(grades)
@@ -54,7 +87,14 @@ export default function DashboardClient({ initialData, weeklyProgressData }: Rea
 
   return (
     <>
-      <Header />
+      <Header 
+        hasUnreadFeedback={hasUnreadFeedback} 
+        isFeedbackOpen={isFeedbackDropdownOpen}
+        onFeedbackClick={handleToggleFeedbackDropdown}
+        onFeedbackRead={handleFeedbackRead}
+        onCloseFeedback={handleToggleFeedbackDropdown}
+        initialFeedback={feedbackList}
+      />
       <div className="min-h-screen bg-slate-900 text-white relative overflow-hidden">
       {/* Epic LOTR Background */}
       <div className="fixed inset-0 z-0">
@@ -248,9 +288,9 @@ export default function DashboardClient({ initialData, weeklyProgressData }: Rea
           />
         </div>
 
-        {/* Weekly Progress Chart */}
+        {/* Assignment Progress Chart */}
         <div className="mb-8">
-          <ProgressChart data={weeklyProgressData} />
+          <AssignmentProgressChart data={assignmentProgressData} />
         </div>
 
         {/* Students Table */}

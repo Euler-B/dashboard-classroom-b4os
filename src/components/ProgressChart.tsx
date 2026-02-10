@@ -32,8 +32,8 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
           <XAxis dataKey="weekLabel" stroke="#666" />
           <YAxis stroke="#666" domain={[0, 100]} />
           <Tooltip
-            formatter={(value: number | undefined) => value !== undefined ? [`${value.toFixed(2)}%`, ''] : ['N/A', '']}
-            labelFormatter={(label: React.ReactNode) => `Semana: ${String(label)}`}
+            formatter={(value: number | undefined) => value ? [`${value.toFixed(2)}%`, ''] : ['N/A', '']}
+            labelFormatter={(label) => `Semana: ${String(label)}`}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid #ccc',

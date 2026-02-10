@@ -3,6 +3,7 @@ import type { Session } from 'next-auth'
 import { createClient } from '@supabase/supabase-js'
 import { authOptions } from './auth-config'
 import type { Student, Assignment, ConsolidatedGrade, StudentFeedback } from './supabase'
+import { TABLE_NAMES } from './constants'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -15,12 +16,20 @@ export interface DashboardData {
   assignments: Assignment[]
   grades: ConsolidatedGrade[]
   feedback: StudentFeedback[]
+  hasUnreadFeedback: boolean
 }
 
 export interface WeeklyProgress {
   weekLabel: string; // e.g., "Week 40" or "Oct 2"
   studentScore: number; // Percentage
   classAverage: number; // Percentage
+}
+
+export interface AssignmentProgress {
+  assignmentName: string;
+  originalName?: string;
+  studentPoints: number;
+  classAveragePoints: number;
 }
 
 // Helper function to get weekly progress data for a student and class average
@@ -56,7 +65,6 @@ export async function getWeeklyProgressData(githubUsername: string): Promise<Wee
     const weekNum = getWeekNumber(weekStart)
     const year = weekStart.getFullYear()
     const weekYear = `${year}-${weekNum}`
-    const weekLabel = `Week ${weekNum}`
     weeklyDataMap.set(weekYear, {
       weekYear,
       studentAwarded: 0, studentAvailable: 0,
@@ -71,7 +79,6 @@ export async function getWeeklyProgressData(githubUsername: string): Promise<Wee
     const weekNum = getWeekNumber(gradeDate)
     const year = gradeDate.getFullYear()
     const weekYear = `${year}-${weekNum}`
-    const weekLabel = `Week ${weekNum}`
 
     if (!weeklyDataMap.has(weekYear)) {
       weeklyDataMap.set(weekYear, {
@@ -99,7 +106,7 @@ export async function getWeeklyProgressData(githubUsername: string): Promise<Wee
   const result: WeeklyProgress[] = Array.from(weeklyDataMap.entries())
     .sort(([weekYearA], [weekYearB]) => weekYearA.localeCompare(weekYearB))
     .map(([weekYear, stats]) => {
-      const weekNum = parseInt(weekYear.split('-')[1])
+      const weekNum = Number.parseInt(weekYear.split('-')[1])
       const weekLabel = `Week ${weekNum}`
       const studentScore = stats.studentAvailable > 0
         ? (stats.studentAwarded / stats.studentAvailable) * 100
@@ -119,6 +126,89 @@ export async function getWeeklyProgressData(githubUsername: string): Promise<Wee
   return result
 }
 
+// Helper function to get assignment progress data for a student and class average
+export async function getAssignmentProgressData(githubUsername: string): Promise<AssignmentProgress[]> {
+  const { data: grades, error } = await supabase
+    .from('zzz_grades')
+    .select('github_username, assignment_name, points_awarded, fork_created_at')
+    .not('points_awarded', 'is', null)
+    .order('fork_created_at', { ascending: true })
+
+  if (error || !grades) {
+    console.error('Error fetching assignment grades:', error)
+    return []
+  }
+
+  const assignmentMap = new Map<string, {
+    studentAwarded: number,
+    classTotalPoints: number,
+    studentCount: number,
+    forkCreatedAt: string
+  }>()
+
+  grades.forEach(grade => {
+    const assignmentName = grade.assignment_name;
+    // Forzamos que sea número para evitar concatenación de strings
+    const points = Number(grade.points_awarded) || 0; 
+
+    if (!assignmentMap.has(assignmentName)) {
+      assignmentMap.set(assignmentName, {
+        studentAwarded: 0,
+        classTotalPoints: 0,
+        studentCount: 0,
+        forkCreatedAt: grade.fork_created_at || ''
+      })
+    }
+
+    const stats = assignmentMap.get(assignmentName)!
+    
+    if (grade.github_username === githubUsername) {
+      stats.studentAwarded = points; // Asumimos que un alumno solo tiene una entrada por tarea
+    }
+
+    stats.classTotalPoints += points;
+    stats.studentCount += 1;
+  })
+
+  const result: AssignmentProgress[] = Array.from(assignmentMap.entries())
+    .map(([assignmentName, stats]) => {
+      const classAverage = stats.studentCount > 0 ? stats.classTotalPoints / stats.studentCount : 0;
+      
+      return {
+        assignmentName: formatAssignmentName(assignmentName),
+        originalName: assignmentName,
+        // Aquí asumimos que quieres el porcentaje. 
+        // Si points_awarded ya es sobre 100, no necesitas dividir por maxPoints.
+        studentPoints: Math.round(stats.studentAwarded), 
+        classAveragePoints: Math.round(classAverage)
+      }
+    })
+    .sort((a, b) => {
+      // Get stats for each assignment to compare dates
+      const statsA = assignmentMap.get(a.originalName)!;
+      const statsB = assignmentMap.get(b.originalName)!;
+      const dateA = statsA?.forkCreatedAt || '';
+      const dateB = statsB?.forkCreatedAt || '';
+      return dateA.localeCompare(dateB);
+    });
+
+  return result
+}
+
+// Helper function to format assignment names with line breaks for better readability
+function formatAssignmentName(name: string): string {
+  const nameMap: Record<string, string> = {
+    'bitcoin-core-setup-and-tests': 'Bitcoin Core Setup\n       and Tests',
+    'curse-of-missing-descriptors': 'Curse of Missing\n      Descriptors',
+    'the-moria-mining-codex-part-1': 'The Moria Mining\n   Codex Part-1',
+    'the-moria-mining-codex-part-2': 'The Moria Mining\n   Codex Part-2',
+    'tweaks-generator-for-silent-payments': ' Tweaks Generator for\n      Silent Payments',
+    'vintage-wallet-modernization-challenge': 'Vintage Wallet Modernization\n       Challenge'
+  }
+  
+  return nameMap[name] || name
+}
+
 // Helper function to get week number (ISO week date)
 function getWeekNumber(d: Date): number {
   // Copy date so don't modify original
@@ -136,10 +226,10 @@ function getWeekNumber(d: Date): number {
 // Helper function to get full leaderboard (admin/instructor only)
 async function getFullLeaderboard(): Promise<DashboardData> {
   const [studentsResult, assignmentsResult, gradesResult, feedbackResult] = await Promise.all([
-    supabase.from('zzz_students').select('*').order('github_username'),
-    supabase.from('zzz_assignments').select('*').order('name'),
-    supabase.from('consolidated_grades').select('*').order('github_username'),
-    supabase.from('zzz_student_reviewers')
+    supabase.from(TABLE_NAMES.STUDENTS).select('*').order('github_username'),
+    supabase.from(TABLE_NAMES.ASSIGNMENTS).select('*').order('name'),
+    supabase.from(TABLE_NAMES.CONSOLIDATED_GRADES).select('*').order('github_username'),
+    supabase.from(TABLE_NAMES.STUDENT_REVIEWERS)
       .select('id, student_username, reviewer_username, assignment_name, feedback_for_student, status, completed_at')
       .not('feedback_for_student', 'is', null)
   ])
@@ -161,11 +251,27 @@ async function getFullLeaderboard(): Promise<DashboardData> {
     // Don't throw - feedback is optional
   }
 
+  // Check if there's any unread feedback in the system (admin sees all)
+  const { count: unreadReviewersCount } = await supabase
+    .from(TABLE_NAMES.STUDENT_REVIEWERS)
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'completed')
+    .eq('read_by_student', false)
+    .not('feedback_for_student', 'is', null);
+
+  const { count: unreadCommentsCount } = await supabase
+    .from(TABLE_NAMES.REVIEW_COMMENTS)
+    .select('*', { count: 'exact', head: true })
+    .eq('read_by_student', false);
+
+  const hasUnreadFeedback = ((unreadReviewersCount || 0) + (unreadCommentsCount || 0)) > 0;
+
   return {
     students: studentsResult.data || [],
     assignments: assignmentsResult.data || [],
     grades: gradesResult.data || [],
-    feedback: feedbackResult.data || []
+    feedback: feedbackResult.data || [],
+    hasUnreadFeedback
   }
 }
 
@@ -176,20 +282,21 @@ async function getAnonymizedLeaderboard(currentUsername?: string): Promise<Dashb
       students: [],
       assignments: [],
       grades: [],
-      feedback: []
+      feedback: [],
+      hasUnreadFeedback: false
     }
   }
 
   // Fetch all data in parallel (students see full leaderboard)
   const [studentsResult, assignmentsResult, gradesResult, privacyResult] = await Promise.all([
     // Get ALL students for leaderboard
-    supabase.from('zzz_students').select('*').order('github_username'),
+    supabase.from(TABLE_NAMES.STUDENTS).select('*').order('github_username'),
     // Get ALL assignments
-    supabase.from('zzz_assignments').select('*').order('name'),
+    supabase.from(TABLE_NAMES.ASSIGNMENTS).select('*').order('name'),
     // Get ALL grades for leaderboard
-    supabase.from('consolidated_grades').select('*').order('github_username'),
+    supabase.from(TABLE_NAMES.CONSOLIDATED_GRADES).select('*').order('github_username'),
     // Get privacy preferences to filter feedback visibility
-    supabase.from('zzz_user_privacy').select('github_username, show_real_name')
+    supabase.from(TABLE_NAMES.USER_PRIVACY).select('github_username, show_real_name')
   ])
 
   if (studentsResult.error) {
@@ -219,7 +326,7 @@ async function getAnonymizedLeaderboard(currentUsername?: string): Promise<Dashb
 
   // Fetch feedback: own feedback + feedback from users who revealed their identity
   const feedbackResult = await supabase
-    .from('zzz_student_reviewers')
+    .from(TABLE_NAMES.STUDENT_REVIEWERS)
     .select('id, student_username, reviewer_username, assignment_name, feedback_for_student, status, completed_at')
     .not('feedback_for_student', 'is', null)
 
@@ -231,11 +338,29 @@ async function getAnonymizedLeaderboard(currentUsername?: string): Promise<Dashb
     )
   }
 
+  // Check if current user has unread feedback
+  const { count: unreadReviewersCount } = await supabase
+    .from(TABLE_NAMES.STUDENT_REVIEWERS)
+    .select('*', { count: 'exact', head: true })
+    .eq('student_username', currentUsername)
+    .eq('status', 'completed')
+    .eq('read_by_student', false)
+    .not('feedback_for_student', 'is', null);
+
+  const { count: unreadCommentsCount } = await supabase
+    .from(TABLE_NAMES.REVIEW_COMMENTS)
+    .select('*', { count: 'exact', head: true })
+    .eq('student_username', currentUsername)
+    .eq('read_by_student', false);
+
+  const hasUnreadFeedback = ((unreadReviewersCount || 0) + (unreadCommentsCount || 0)) > 0;
+
   return {
     students: studentsResult.data || [],
     assignments: assignmentsResult.data || [],
     grades: gradesResult.data || [],
-    feedback: filteredFeedback
+    feedback: filteredFeedback,
+    hasUnreadFeedback
   }
 }
 

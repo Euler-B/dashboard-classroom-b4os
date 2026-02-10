@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth-config'
-import { getDashboardData, getWeeklyProgressData, WeeklyProgress } from '@/lib/dashboard'
+import { getDashboardData, getAssignmentProgressData, AssignmentProgress } from '@/lib/dashboard'
 import DashboardClient from '@/components/DashboardClient'
 import ProtectedRoute from '@/components/ProtectedRoute'
 
@@ -16,13 +16,10 @@ export default async function Dashboard() {
 
   // Fetch dashboard data on server - RBAC is applied here
   let dashboardData
-  let weeklyProgressData: WeeklyProgress[]
+  let assignmentProgressData: AssignmentProgress[]
   try {
-    console.log('[page.tsx] githubUsername from session:', session.user.githubUsername)
     dashboardData = await getDashboardData() // Server-side only
-    weeklyProgressData = await getWeeklyProgressData(session.user.githubUsername)
-    console.log('[page.tsx] weeklyProgressData result:', weeklyProgressData)
-    console.log('[page.tsx] weeklyProgressData length:', weeklyProgressData.length)
+    assignmentProgressData = await getAssignmentProgressData(session.user.githubUsername)
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
     // Fallback to empty data
@@ -30,16 +27,17 @@ export default async function Dashboard() {
       students: [],
       assignments: [],
       grades: [],
-      feedback: []
+      feedback: [],
+      hasUnreadFeedback: false
     }
-    weeklyProgressData = []
+    assignmentProgressData = []
   }
 
   // Data is passed as props to client component
   // Server-rendered, not exposed in network tab
   return (
     <ProtectedRoute>
-      <DashboardClient initialData={dashboardData} weeklyProgressData={weeklyProgressData} />
+      <DashboardClient initialData={dashboardData} assignmentProgressData={assignmentProgressData} />
     </ProtectedRoute>
   )
 }
