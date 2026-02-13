@@ -41,11 +41,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: get badges with progress
+    const points = Number(await getUserPoints(username)) || 0
     const badges = await getUserBadges(username)
     const nextBadgeProgress = await getNextBadgeProgress(username)
 
     return NextResponse.json({ 
       badges,
+      points,
       definitions: BADGE_DEFINITIONS,
       nextBadgeProgress
     })
